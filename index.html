@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#c8452f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Intervall">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Intervalltimer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{-webkit-tap-highlight-color:transparent}
+body{margin:0}
+[hidden]{display:none!important}
+/* Layout: en kolumn, mobil först. Redigeringsvy med passlista, körvy som fyller skärmen. */
+:root{
+  --bg:#f3f1ee; --surface:#ffffff; --fg:#1d1b1a; --muted:#6f6863; --line:#e2ddd8;
+  --run:#c8452f; --run-soft:#f6e1dc; --rest:#2f6f8f; --rest-soft:#dcebf2;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#171514; --surface:#221f1d; --fg:#f1ece7; --muted:#a39a93; --line:#35302c;
+  --run:#e8664e; --run-soft:#3d2520; --rest:#5aa3c6; --rest-soft:#1d3039; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#171514; --surface:#221f1d; --fg:#f1ece7; --muted:#a39a93; --line:#35302c;
+  --run:#e8664e; --run-soft:#3d2520; --rest:#5aa3c6; --rest-soft:#1d3039; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.4}
+.wrap{max-width:560px;margin:0 auto;padding:20px 16px 40px;display:flex;flex-direction:column;gap:20px}
+h1{font-family:var(--display);font-weight:700;font-size:2rem;letter-spacing:.01em;margin:0;text-transform:uppercase}
+.sum{display:flex;gap:24px;flex-wrap:wrap;color:var(--muted);font-size:.85rem;text-transform:uppercase;letter-spacing:.06em}
+.sum b{display:block;font-family:var(--display);font-size:1.8rem;color:var(--fg);letter-spacing:0;font-variant-numeric:tabular-nums;font-weight:700}
+.steps{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.step{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 10px 10px 0;overflow:hidden}
+.kind{width:44px;align-self:stretch;border:0;border-radius:0;font-family:var(--display);font-weight:700;font-size:.8rem;letter-spacing:.05em;writing-mode:vertical-rl;transform:rotate(180deg);cursor:pointer;color:#fff}
+.kind[data-k="run"]{background:var(--run)} .kind[data-k="rest"]{background:var(--rest)}
+.step .mid{display:flex;flex-direction:column;gap:6px;min-width:0}
+.step input[type=text]{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:7px 8px;font:inherit;background:var(--bg);color:var(--fg)}
+.time{display:flex;align-items:center;gap:4px;font-family:var(--display);font-size:1.3rem}
+.time input{width:3.2em;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font:inherit;text-align:center;background:var(--bg);color:var(--fg);font-variant-numeric:tabular-nums}
+.time small{font-family:var(--body);font-size:.75rem;color:var(--muted)}
+.tools{display:flex;flex-direction:column;gap:4px}
+.ic{width:34px;height:30px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:6px;cursor:pointer;font-size:.95rem}
+.ic:hover{color:var(--fg)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:10px 14px;font:600 .95rem var(--body);cursor:pointer}
+.btn.primary{background:var(--run);border-color:var(--run);color:#fff;font-family:var(--display);font-size:1.4rem;letter-spacing:.04em;text-transform:uppercase;padding:14px;width:100%}
+.btn:disabled{opacity:.4;cursor:default}
+.rep{display:flex;align-items:center;gap:8px;font-size:.95rem}
+.rep input{width:3.5em;border:1px solid var(--line);border-radius:6px;padding:7px;font:inherit;text-align:center;background:var(--surface);color:var(--fg)}
+.note{font-size:.8rem;color:var(--muted)}
+.toggle{display:flex;align-items:center;gap:10px;font-size:.95rem}
+.toggle input{width:20px;height:20px;accent-color:var(--rest)}
+.favs{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:16px}
+h2{font-family:var(--display);font-weight:700;text-transform:uppercase;font-size:1.3rem;margin:0;letter-spacing:.02em}
+#favName{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--surface);color:var(--fg)}
+.favlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.favlist li{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.favlist .info{flex:1;min-width:0}
+.favlist .info b{display:block;font-weight:600;overflow-wrap:anywhere}
+.favlist .info span{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.favlist .btn{padding:7px 10px;font-size:.85rem}
+.btn.warn{border-color:var(--run);color:var(--run)}
+.empty{color:var(--muted);font-size:.9rem;padding:6px 0}
+.toast{font-size:.85rem;color:var(--rest);min-height:1.2em}
+:focus-visible{outline:2px solid var(--rest);outline-offset:2px}
+
+/* Körvy */
+#run{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);padding:calc(env(safe-area-inset-top,0px) + 16px) 16px calc(env(safe-area-inset-bottom,0px) + 16px);box-sizing:border-box;transition:background .3s}
+#run[data-k="run"]{background:var(--run-soft)} #run[data-k="rest"]{background:var(--rest-soft)}
+.top{display:flex;justify-content:space-between;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-variant-numeric:tabular-nums}
+.center{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:6px;min-height:0}
+.badge{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:1rem;padding:4px 12px;border-radius:99px;color:#fff}
+#run[data-k="run"] .badge{background:var(--run)} #run[data-k="rest"] .badge{background:var(--rest)}
+#rDesc{font-size:clamp(1.4rem,6vw,2.2rem);font-weight:600;text-wrap:balance;max-width:20ch}
+#rClock{font-family:var(--display);font-weight:700;font-size:clamp(6rem,34vw,13rem);line-height:.9;font-variant-numeric:tabular-nums}
+#rNext{color:var(--muted);font-size:1rem}
+.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--fg);transition:width .25s linear}
+.ctrl{display:grid;grid-template-columns:1fr 2fr 1fr;gap:10px;margin-top:14px}
+.ctrl .btn{padding:16px 8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap" id="edit">
+  <h1>Intervalltimer</h1>
+  <div class="sum">
+    <div>Totaltid<b id="total">0:00</b></div>
+    <div>Moment<b id="count">0</b></div>
+  </div>
+  <ul class="steps" id="steps"></ul>
+  <div class="row">
+    <button class="btn" id="addRun">+ Löpning</button>
+    <button class="btn" id="addRest">+ Vila</button>
+    <label class="rep" for="reps">Kör passet <input id="reps" type="number" min="1" max="50" value="1"> gånger</label>
+  </div>
+  <label class="toggle" for="voice"><input type="checkbox" id="voice"> Uppläst röst vid varje nytt moment</label>
+  <button class="btn primary" id="start">Starta</button>
+
+  <section class="favs">
+    <h2>Favoritpass</h2>
+    <div class="row">
+      <input type="text" id="favName" placeholder="Namn, t.ex. Tisdagsintervaller" aria-label="Namn på pass">
+      <button class="btn" id="favSave">Spara</button>
+    </div>
+    <ul class="favlist" id="favList"></ul>
+  </section>
+  <p class="note">Tryck på den färgade kanten för att växla mellan löpning och vila. Passet sparas i den här webbläsaren. Signal hörs vid varje byte och tre korta pip de sista sekunderna.</p>
+</div>
+
+<div id="run" hidden data-k="run">
+  <div class="top"><span id="rStep">Moment 1 av 1</span><span id="rLeft">Kvar 0:00</span></div>
+  <div class="center">
+    <span class="badge" id="rKind">Löpning</span>
+    <div id="rDesc"></div>
+    <div id="rClock">0:00</div>
+    <div id="rNext"></div>
+  </div>
+  <div class="bar"><i id="rBar"></i></div>
+  <div class="ctrl">
+    <button class="btn" id="back">‹ Bakåt</button>
+    <button class="btn" id="pause">Paus</button>
+    <button class="btn" id="skip">Hoppa ›</button>
+  </div>
+  <button class="btn" id="stop" style="margin-top:10px">Avsluta</button>
+</div>
+
+<script>
+const KEY="intervalltimer.v1";
+const EXAMPLE=[
+  {k:"rest",d:"Uppvärmning, lugn jogg",s:300},
+  {k:"run",d:"Löpning, högt tempo",s:60},
+  {k:"rest",d:"Gå och vila",s:60},
+  {k:"run",d:"Löpning, högt tempo",s:60},
+  {k:"rest",d:"Gå och vila",s:60},
+  {k:"run",d:"Längre drag, jämnt tempo",s:180},
+  {k:"rest",d:"Nedjogg",s:300}
+];
+let steps, reps=1;
+try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&Array.isArray(s.steps)&&s.steps.length){steps=s.steps;reps=s.reps||1}}catch(e){}
+if(!steps) steps=EXAMPLE.map(x=>({...x}));
+const $=id=>document.getElementById(id);
+const fmt=s=>{s=Math.max(0,Math.ceil(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),r=s%60;return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(r).padStart(2,"0")};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({steps,reps}))}catch(e){}};
+const label=k=>k==="run"?"Löpning":"Vila";
+
+function render(){
+  const ul=$("steps");ul.innerHTML="";
+  steps.forEach((st,i)=>{
+    const li=document.createElement("li");li.className="step";
+    li.innerHTML=`<button class="kind" data-k="${st.k}" aria-label="Växla typ">${label(st.k)}</button>
+      <div class="mid"><input type="text" id="d${i}" placeholder="Beskrivning" value="">
+      <div class="time"><input id="m${i}" type="number" min="0" max="180" inputmode="numeric"><small>min</small>
+      <input id="s${i}" type="number" min="0" max="59" inputmode="numeric"><small>sek</small></div></div>
+      <div class="tools"><button class="ic" data-a="up" aria-label="Flytta upp">↑</button><button class="ic" data-a="dup" aria-label="Kopiera">⧉</button><button class="ic" data-a="del" aria-label="Ta bort">✕</button></div>`;
+    li.querySelector("input[type=text]").value=st.d;
+    li.querySelector(`#m${i}`).value=Math.floor(st.s/60);
+    li.querySelector(`#s${i}`).value=st.s%60;
+    li.querySelector(".kind").onclick=()=>{st.k=st.k==="run"?"rest":"run";save();render()};
+    li.querySelector("input[type=text]").oninput=e=>{st.d=e.target.value;save()};
+    const upd=()=>{const m=+li.querySelector(`#m${i}`).value||0,s=+li.querySelector(`#s${i}`).value||0;st.s=Math.max(0,m*60+s);save();summary()};
+    li.querySelector(`#m${i}`).oninput=upd;li.querySelector(`#s${i}`).oninput=upd;
+    li.querySelectorAll(".ic").forEach(b=>b.onclick=()=>{
+      const a=b.dataset.a;
+      if(a==="del")steps.splice(i,1);
+      if(a==="dup")steps.splice(i+1,0,{...st});
+      if(a==="up"&&i>0)[steps[i-1],steps[i]]=[steps[i],steps[i-1]];
+      save();render();
+    });
+    ul.appendChild(li);
+  });
+  $("reps").value=reps;summary();
+}
+function summary(){
+  const t=steps.reduce((a,s)=>a+s.s,0)*reps;
+  $("total").textContent=fmt(t);$("count").textContent=steps.length*reps;
+  $("start").disabled=!steps.some(s=>s.s>0);
+}
+$("addRun").onclick=()=>{steps.push({k:"run",d:"Löpning",s:60});save();render()};
+$("addRest").onclick=()=>{steps.push({k:"rest",d:"Vila",s:60});save();render()};
+$("reps").oninput=e=>{reps=Math.min(50,Math.max(1,+e.target.value||1));save();summary()};
+
+/* Uppläst röst */
+const VKEY="intervalltimer.voice";
+let voiceOn=false;try{voiceOn=localStorage.getItem(VKEY)==="1"}catch(e){}
+$("voice").checked=voiceOn;
+$("voice").onchange=e=>{voiceOn=e.target.checked;try{localStorage.setItem(VKEY,voiceOn?"1":"0")}catch(e){}};
+const hasSpeech="speechSynthesis" in window;
+if(!hasSpeech){$("voice").disabled=true;$("voice").parentElement.append(" (stöds inte i den här webbläsaren)")}
+function svVoice(){try{return speechSynthesis.getVoices().find(v=>/^sv/i.test(v.lang))}catch(e){return null}}
+function sayTime(s){const m=Math.floor(s/60),r=s%60;const p=[];
+  if(m)p.push(m===1?"en minut":m+" minuter");if(r)p.push(r+" sekunder");return p.join(" och ")}
+function speak(text){
+  if(!voiceOn||!hasSpeech)return;
+  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="sv-SE";const v=svVoice();if(v)u.voice=v;u.rate=1;speechSynthesis.speak(u)}catch(e){}
+}
+
+/* Favoriter */
+const FKEY="intervalltimer.favs";
+let favs=[];try{favs=JSON.parse(localStorage.getItem(FKEY))||[]}catch(e){}
+const saveFavs=()=>{try{localStorage.setItem(FKEY,JSON.stringify(favs))}catch(e){}};
+let armedDel=-1;
+function renderFavs(){
+  const ul=$("favList");ul.innerHTML="";
+  if(!favs.length){ul.innerHTML='<li class="empty">Inga sparade pass än. Ge passet ett namn och tryck Spara.</li>';return}
+  favs.forEach((f,i)=>{
+    const tot=f.steps.reduce((a,s)=>a+s.s,0)*(f.reps||1);
+    const li=document.createElement("li");
+    li.innerHTML=`<div class="info"><b></b><span>${fmt(tot)} · ${f.steps.length} moment${(f.reps||1)>1?" × "+f.reps+" varv":""}</span></div>
+      <button class="btn" data-a="load">Ladda</button>
+      <button class="btn ${armedDel===i?"warn":""}" data-a="del">${armedDel===i?"Säker?":"Ta bort"}</button>`;
+    li.querySelector("b").textContent=f.name;
+    li.querySelector('[data-a="load"]').onclick=()=>{steps=f.steps.map(x=>({...x}));reps=f.reps||1;$("favName").value=f.name;armedDel=-1;save();render();renderFavs();window.scrollTo({top:0,behavior:"smooth"})};
+    li.querySelector('[data-a="del"]').onclick=()=>{if(armedDel===i){favs.splice(i,1);armedDel=-1;saveFavs()}else armedDel=i;renderFavs()};
+    ul.appendChild(li);
+  });
+}
+$("favSave").onclick=()=>{
+  const name=$("favName").value.trim();
+  if(!name){$("favName").focus();$("favName").placeholder="Skriv ett namn först";return}
+  const entry={name,steps:steps.map(x=>({...x})),reps};
+  const i=favs.findIndex(f=>f.name.toLowerCase()===name.toLowerCase());
+  if(i>=0)favs[i]=entry;else favs.unshift(entry);
+  saveFavs();armedDel=-1;renderFavs();
+  $("favSave").textContent=i>=0?"Uppdaterat":"Sparat";setTimeout(()=>$("favSave").textContent="Spara",1500);
+};
+renderFavs();
+
+/* Ljud */
+let ac;
+function beep(f=880,dur=.15,when=0){
+  if(!ac)return;const t=ac.currentTime+when,o=ac.createOscillator(),g=ac.createGain();
+  o.frequency.value=f;o.type="square";g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.3,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g).connect(ac.destination);o.start(t);o.stop(t+dur+.02);
+}
+const vib=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
+
+/* Körning */
+let plan=[],idx=0,stepEnd=0,remainAtPause=0,paused=false,tick,lastWhole=-1,wake;
+async function keepAwake(){try{wake=await navigator.wakeLock.request("screen")}catch(e){}}
+function startRun(){
+  try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();ac.resume()}catch(e){}
+  plan=[];for(let r=0;r<reps;r++)steps.forEach(s=>{if(s.s>0)plan.push({...s,r:r+1})});
+  if(!plan.length)return;
+  if(voiceOn&&hasSpeech){try{speechSynthesis.getVoices();speechSynthesis.speak(new SpeechSynthesisUtterance(""))}catch(e){}}
+  $("edit").hidden=true;$("run").hidden=false;paused=false;$("pause").textContent="Paus";
+  keepAwake();goTo(0);tick=setInterval(loop,100);
+}
+function goTo(i){
+  idx=i;const st=plan[idx];
+  stepEnd=performance.now()+st.s*1000;remainAtPause=st.s*1000;lastWhole=-1;
+  $("run").dataset.k=st.k;$("rKind").textContent=label(st.k);
+  $("rDesc").textContent=st.d||label(st.k);
+  $("rStep").textContent=`Moment ${idx+1} av ${plan.length}`+(reps>1?` · varv ${st.r}`:"");
+  const n=plan[idx+1];$("rNext").textContent=n?`Nästa: ${n.d||label(n.k)} · ${fmt(n.s)}`:"Sista momentet";
+  beep(st.k==="run"?1040:660,.4);vib(300);
+  const d=(st.d||"").trim();
+  speak([label(st.k),d&&d.toLowerCase()!==label(st.k).toLowerCase()?d:"",sayTime(st.s)].filter(Boolean).join(". "));
+  loop();
+}
+function loop(){
+  const st=plan[idx];const rem=paused?remainAtPause:stepEnd-performance.now();
+  const sec=Math.ceil(rem/1000);
+  $("rClock").textContent=fmt(rem/1000);
+  $("rBar").style.width=(100*(1-rem/(st.s*1000)))+"%";
+  const after=plan.slice(idx+1).reduce((a,s)=>a+s.s,0);
+  $("rLeft").textContent="Kvar "+fmt(rem/1000+after);
+  if(!paused&&sec!==lastWhole){lastWhole=sec;if(sec<=3&&sec>0){beep(880,.1);vib(80)}}
+  if(!paused&&rem<=0){
+    if(idx+1<plan.length)goTo(idx+1);else finish();
+  }
+}
+function finish(){
+  clearInterval(tick);beep(1040,.2);beep(1320,.2,.25);beep(1560,.5,.5);vib([200,100,200,100,400]);
+  $("run").dataset.k="rest";$("rKind").textContent="Klart";$("rDesc").textContent="Bra jobbat!";
+  $("rClock").textContent="0:00";$("rNext").textContent="";$("rLeft").textContent="Kvar 0:00";$("rBar").style.width="100%";
+  $("pause").disabled=true;speak("Passet är klart. Bra jobbat!");
+}
+function stopRun(){clearInterval(tick);try{hasSpeech&&speechSynthesis.cancel()}catch(e){}try{wake&&wake.release()}catch(e){}$("pause").disabled=false;$("run").hidden=true;$("edit").hidden=false}
+$("start").onclick=startRun;
+$("stop").onclick=stopRun;
+$("pause").onclick=()=>{
+  if(paused){stepEnd=performance.now()+remainAtPause;paused=false;$("pause").textContent="Paus";keepAwake()}
+  else{remainAtPause=stepEnd-performance.now();paused=true;$("pause").textContent="Fortsätt";try{hasSpeech&&speechSynthesis.cancel()}catch(e){}}
+  loop();
+};
+$("skip").onclick=()=>{if(idx+1<plan.length){const p=paused;paused=false;goTo(idx+1);if(p){paused=true;remainAtPause=plan[idx].s*1000;loop()}}else{finish()}};
+$("back").onclick=()=>{const t=Math.max(0,idx-1);const p=paused;paused=false;goTo(t);if(p){paused=true;remainAtPause=plan[idx].s*1000;loop()}};
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!$("run").hidden&&!paused)keepAwake()});
+render();
+</script>
+
+<script>
+if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})})}
+</script>
+</body>
+</html>

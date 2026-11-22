@@ -1,5 +1,5 @@
 // Höj versionen när index.html ändras, så hämtar appen den nya versionen.
-const CACHE = "intervalltimer-v1";
+const CACHE = "intervalltimer-v2";
 const CORE = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {

@@ -1,0 +1,14 @@
+{
+  "appId": "io.github.erik7411.intervalltimer",
+  "appName": "Intervalltimer",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#f3f1ee"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "presentationOptions": []
+    }
+  }
+}

@@ -7,4 +7,6 @@ Webbapp för egna intervallpass med löpning och vila. Nedräkning, ljudsignaler
 
 Pass och favoriter sparas lokalt i webbläsaren på enheten.
 
+**iPhone-app med notiser vid låst skärm:** se [app/README.md](app/README.md).
+
 Vid ändring i `index.html`: höj `CACHE`-versionen i `sw.js`.

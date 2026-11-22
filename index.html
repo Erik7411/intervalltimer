@@ -246,19 +246,34 @@ function beep(f=880,dur=.15,when=0){
 const vib=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
 
 /* Körning */
-let plan=[],idx=0,stepEnd=0,remainAtPause=0,paused=false,tick,lastWhole=-1,wake;
+// Tiden räknas med Date.now(), så att den stämmer även om telefonen har sovit.
+let plan=[],idx=0,stepEnd=0,remainAtPause=0,paused=false,done=false,tick,lastWhole=-1,wake;
+const native=()=>window.ITNative||null;
 async function keepAwake(){try{wake=await navigator.wakeLock.request("screen")}catch(e){}}
 function startRun(){
   try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();ac.resume()}catch(e){}
   plan=[];for(let r=0;r<reps;r++)steps.forEach(s=>{if(s.s>0)plan.push({...s,r:r+1})});
   if(!plan.length)return;
   if(voiceOn&&hasSpeech){try{speechSynthesis.getVoices();speechSynthesis.speak(new SpeechSynthesisUtterance(""))}catch(e){}}
-  $("edit").hidden=true;$("run").hidden=false;paused=false;$("pause").textContent="Paus";
-  keepAwake();goTo(0);tick=setInterval(loop,100);
+  $("edit").hidden=true;$("run").hidden=false;paused=false;done=false;$("pause").textContent="Paus";$("pause").disabled=false;
+  try{native()&&native().start()}catch(e){}
+  keepAwake();clearInterval(tick);goTo(0);tick=setInterval(loop,100);
 }
+// Kommande byten, för notiser i iOS-appen när skärmen är låst.
+function upcoming(){
+  if(!plan.length||paused||done)return [];
+  const out=[];let t=stepEnd;
+  for(let j=idx+1;j<plan.length;j++){const s=plan[j];const d=(s.d||"").trim();
+    out.push({at:t,kind:s.k,title:label(s.k)+" · "+fmt(s.s),body:d||label(s.k)});t+=s.s*1000}
+  out.push({at:t,kind:"done",title:"Passet är klart",body:"Bra jobbat!"});
+  return out;
+}
+function nativeSync(){try{native()&&native().update(upcoming())}catch(e){}}
 function goTo(i){
-  idx=i;const st=plan[idx];
-  stepEnd=performance.now()+st.s*1000;remainAtPause=st.s*1000;lastWhole=-1;
+  idx=i;stepEnd=Date.now()+plan[idx].s*1000;remainAtPause=plan[idx].s*1000;show();
+}
+function show(){
+  const st=plan[idx];lastWhole=-1;
   $("run").dataset.k=st.k;$("rKind").textContent=label(st.k);
   $("rDesc").textContent=st.d||label(st.k);
   $("rStep").textContent=`Moment ${idx+1} av ${plan.length}`+(reps>1?` · varv ${st.r}`:"");
@@ -266,42 +281,57 @@ function goTo(i){
   beep(st.k==="run"?1040:660,.4);vib(300);
   const d=(st.d||"").trim();
   speak([label(st.k),d&&d.toLowerCase()!==label(st.k).toLowerCase()?d:"",sayTime(st.s)].filter(Boolean).join(". "));
-  loop();
+  nativeSync();loop();
 }
 function loop(){
-  const st=plan[idx];const rem=paused?remainAtPause:stepEnd-performance.now();
+  if(done)return;
+  if(!paused&&Date.now()>=stepEnd){
+    // Hoppa fram så många moment som har hunnit passera (t.ex. när telefonen varit låst).
+    while(Date.now()>=stepEnd){
+      if(idx+1>=plan.length){finish();return}
+      idx++;stepEnd+=plan[idx].s*1000;
+    }
+    show();return;
+  }
+  const st=plan[idx];const rem=paused?remainAtPause:stepEnd-Date.now();
   const sec=Math.ceil(rem/1000);
   $("rClock").textContent=fmt(rem/1000);
   $("rBar").style.width=(100*(1-rem/(st.s*1000)))+"%";
   const after=plan.slice(idx+1).reduce((a,s)=>a+s.s,0);
   $("rLeft").textContent="Kvar "+fmt(rem/1000+after);
   if(!paused&&sec!==lastWhole){lastWhole=sec;if(sec<=3&&sec>0){beep(880,.1);vib(80)}}
-  if(!paused&&rem<=0){
-    if(idx+1<plan.length)goTo(idx+1);else finish();
-  }
 }
 function finish(){
-  clearInterval(tick);beep(1040,.2);beep(1320,.2,.25);beep(1560,.5,.5);vib([200,100,200,100,400]);
+  clearInterval(tick);done=true;beep(1040,.2);beep(1320,.2,.25);beep(1560,.5,.5);vib([200,100,200,100,400]);
   $("run").dataset.k="rest";$("rKind").textContent="Klart";$("rDesc").textContent="Bra jobbat!";
   $("rClock").textContent="0:00";$("rNext").textContent="";$("rLeft").textContent="Kvar 0:00";$("rBar").style.width="100%";
   $("pause").disabled=true;speak("Passet är klart. Bra jobbat!");
+  try{native()&&native().stop()}catch(e){}
 }
-function stopRun(){clearInterval(tick);try{hasSpeech&&speechSynthesis.cancel()}catch(e){}try{wake&&wake.release()}catch(e){}$("pause").disabled=false;$("run").hidden=true;$("edit").hidden=false}
+function stopRun(){clearInterval(tick);done=true;try{hasSpeech&&speechSynthesis.cancel()}catch(e){}try{wake&&wake.release()}catch(e){}
+  try{native()&&native().stop()}catch(e){}
+  $("pause").disabled=false;$("run").hidden=true;$("edit").hidden=false}
 $("start").onclick=startRun;
 $("stop").onclick=stopRun;
 $("pause").onclick=()=>{
-  if(paused){stepEnd=performance.now()+remainAtPause;paused=false;$("pause").textContent="Paus";keepAwake()}
-  else{remainAtPause=stepEnd-performance.now();paused=true;$("pause").textContent="Fortsätt";try{hasSpeech&&speechSynthesis.cancel()}catch(e){}}
-  loop();
+  if(done)return;
+  if(paused){stepEnd=Date.now()+remainAtPause;paused=false;$("pause").textContent="Paus";keepAwake()}
+  else{remainAtPause=stepEnd-Date.now();paused=true;$("pause").textContent="Fortsätt";try{hasSpeech&&speechSynthesis.cancel()}catch(e){}}
+  nativeSync();loop();
 };
-$("skip").onclick=()=>{if(idx+1<plan.length){const p=paused;paused=false;goTo(idx+1);if(p){paused=true;remainAtPause=plan[idx].s*1000;loop()}}else{finish()}};
-$("back").onclick=()=>{const t=Math.max(0,idx-1);const p=paused;paused=false;goTo(t);if(p){paused=true;remainAtPause=plan[idx].s*1000;loop()}};
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!$("run").hidden&&!paused)keepAwake()});
+function jump(t){const p=paused;paused=false;goTo(t);if(p){paused=true;remainAtPause=plan[idx].s*1000;nativeSync();loop()}}
+$("skip").onclick=()=>{if(done)return;if(idx+1<plan.length)jump(idx+1);else finish()};
+$("back").onclick=()=>{if(done)return;jump(Math.max(0,idx-1))};
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden||$("run").hidden||done)return;
+  if(!paused)keepAwake();
+  loop();nativeSync();
+});
 render();
 </script>
 
 <script>
-if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})})}
+if("serviceWorker" in navigator&&!window.Capacitor){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})})}
 </script>
 </body>
 </html>

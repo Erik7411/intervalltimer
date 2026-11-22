@@ -1,0 +1,20 @@
+{
+  "name": "intervalltimer-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "iOS-app (Capacitor) runt webbversionen av intervalltimern",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "ios": "npm run build && npx cap sync ios && npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor-community/keep-awake": "^8.0.1",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/ios": "^8.6.2",
+    "@capacitor/local-notifications": "^8.3.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
+    "esbuild": "^0.28.2"
+  }
+}
